@@ -4,7 +4,6 @@ import ex.infra.security.TokenService;
 import ex.model.*;
 import ex.model.repository.UsuarioRepository;
 import ex.model.repository.CongregacaoRepository;
-import ex.service.EmailService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
@@ -36,8 +35,6 @@ public class UsuarioController {
     private TokenService tokenService;
     @Autowired
     private UsuarioService usuarioService;
-    @Autowired
-    private EmailService emailService;
 
     @GetMapping("/search")
     public List<UsuarioResponseDTO> buscarUsuariosPorNome(@RequestParam String nome) {
@@ -65,10 +62,6 @@ public class UsuarioController {
 
         var usuario = (Usuario) auth.getPrincipal();
 
-        if (usuario.getVerified() != null && !usuario.getVerified()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "E-mail não verificado. Por favor, verifique seu e-mail."));
-        }
-
         var token = tokenService.generateToken(usuario);
 
         ResponseCookie cookie = ResponseCookie.from("token", token)
@@ -94,34 +87,11 @@ public class UsuarioController {
         Congregacao congregacao = congregacaoRepository.findById(data.idCongregacao())
                 .orElseThrow(() -> new IllegalArgumentException("Congregação não encontrada"));
         usuario.setCongregacao(congregacao);
-
-        String token = tokenService.generateVerificationToken(usuario);
-        usuario.setVerificationToken(token);
-        usuario.setVerified(false);
+        usuario.setAtivo(true);
 
         this.usuarioRepository.save(usuario);
-        this.emailService.enviarEmailVerificacao(usuario.getEmail(), token);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Usuário registrado com sucesso. Por favor, verifique seu e-mail para ativar sua conta."));
-    }
-
-    @GetMapping("/verify")
-    public ResponseEntity verify(@RequestParam String token) {
-        String email = tokenService.validateToken(token);
-        if (email.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Token inválido ou expirado."));
-        }
-
-        Usuario usuario = (Usuario) usuarioRepository.findByEmail(email);
-        if (usuario == null || !token.equals(usuario.getVerificationToken())) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Token inválido."));
-        }
-
-        usuario.setVerified(true);
-        usuario.setVerificationToken(null);
-        usuarioRepository.save(usuario);
-
-        return ResponseEntity.ok(Map.of("message", "E-mail verificado com sucesso! Agora você pode fazer login."));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Usuário registrado com sucesso."));
     }
 
     @PutMapping("/{id}")

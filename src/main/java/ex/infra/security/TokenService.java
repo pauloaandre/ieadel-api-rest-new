@@ -34,19 +34,6 @@ public class TokenService {
         }
     }
 
-    public String generateVerificationToken(Usuario usuario) {
-        try {
-            Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.create()
-                    .withIssuer(ISSUER)
-                    .withSubject(usuario.getEmail())
-                    .withExpiresAt(genExpirationDate(24))
-                    .sign(algorithm);
-        } catch (JWTCreationException exception) {
-            throw new RuntimeException("Erro ao gerar token de verificação", exception);
-        }
-    }
-
     public String validateToken(String token){
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);

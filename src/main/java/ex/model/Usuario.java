@@ -36,12 +36,6 @@ public class Usuario implements UserDetails {
     @JoinColumn(name = "id_congregacao", nullable = false)
     private Congregacao congregacao;
 
-    @Column(name = "verification_token")
-    private String verificationToken;
-
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
-
     @Column(name = "reset_token")
     private String resetToken;
 
@@ -110,22 +104,6 @@ public class Usuario implements UserDetails {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
-    }
-
-    public String getVerificationToken() {
-        return verificationToken;
-    }
-
-    public void setVerificationToken(String verificationToken) {
-        this.verificationToken = verificationToken;
-    }
-
-    public Boolean getVerified() {
-        return isVerified;
-    }
-
-    public void setVerified(Boolean verified) {
-        isVerified = verified;
     }
 
     public String getResetToken() {
