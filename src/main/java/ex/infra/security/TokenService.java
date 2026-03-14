@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 @Service
@@ -18,27 +17,41 @@ public class TokenService {
     @Value("${api.security.token.secret}")
     private String secret;
 
+    private static final String ISSUER = "auth-api";
+
     public String generateToken(Usuario usuario){
         try{
             Algorithm algorithm = Algorithm.HMAC256(secret);
-            String token = JWT.create()
-                    .withIssuer("auth-api")
+            return JWT.create()
+                    .withIssuer(ISSUER)
                     .withSubject(usuario.getEmail())
                     .withClaim("perfil", usuario.getPerfil().name())
                     .withClaim("idCongregacao", usuario.getCongregacao().getIdCongregacao())
-                    .withExpiresAt(genExpirationDate())
+                    .withExpiresAt(genExpirationDate(2))
                     .sign(algorithm);
-            return token;
         } catch(JWTCreationException exception){
-            throw new RuntimeException("Erro ao generar token", exception);
+            throw new RuntimeException("Erro ao gerar token", exception);
+        }
+    }
+
+    public String generateVerificationToken(Usuario usuario) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            return JWT.create()
+                    .withIssuer(ISSUER)
+                    .withSubject(usuario.getEmail())
+                    .withExpiresAt(genExpirationDate(24))
+                    .sign(algorithm);
+        } catch (JWTCreationException exception) {
+            throw new RuntimeException("Erro ao gerar token de verificação", exception);
         }
     }
 
     public String validateToken(String token){
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
-            return  JWT.require(algorithm)
-                    .withIssuer("auth-api")
+            return JWT.require(algorithm)
+                    .withIssuer(ISSUER)
                     .build()
                     .verify(token)
                     .getSubject();
@@ -47,8 +60,8 @@ public class TokenService {
         }
     }
 
-    private Instant genExpirationDate(){
-        return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
+    private Instant genExpirationDate(int hours){
+        return LocalDateTime.now().plusHours(hours).toInstant(ZoneOffset.of("-03:00"));
     }
 
 }

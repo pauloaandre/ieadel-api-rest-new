@@ -4,11 +4,12 @@ import ex.infra.security.TokenService;
 import ex.model.*;
 import ex.model.repository.UsuarioRepository;
 import ex.model.repository.CongregacaoRepository;
-import ex.service.AuthService;
+import ex.service.EmailService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,8 +26,8 @@ import ex.service.UsuarioService;
 @RestController
 @RequestMapping("/auth")
 public class UsuarioController {
-	@Autowired
-	private UsuarioRepository usuarioRepository;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
     @Autowired
     private CongregacaoRepository congregacaoRepository;
     @Autowired
@@ -35,6 +36,8 @@ public class UsuarioController {
     private TokenService tokenService;
     @Autowired
     private UsuarioService usuarioService;
+    @Autowired
+    private EmailService emailService;
 
     @GetMapping("/search")
     public List<UsuarioResponseDTO> buscarUsuariosPorNome(@RequestParam String nome) {
@@ -43,7 +46,7 @@ public class UsuarioController {
 
     @GetMapping
     public List<UsuarioResponseDTO> listarUsuarios() {
-        return usuarioRepository.findAll().stream()
+        return usuarioRepository.findByAtivoTrue().stream()
                 .map(UsuarioResponseDTO::fromUsuario)
                 .toList();
     }
@@ -61,6 +64,11 @@ public class UsuarioController {
         var auth = this.authenticationManager.authenticate(usernamePassword);
 
         var usuario = (Usuario) auth.getPrincipal();
+
+        if (usuario.getVerified() != null && !usuario.getVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "E-mail não verificado. Por favor, verifique seu e-mail."));
+        }
+
         var token = tokenService.generateToken(usuario);
 
         ResponseCookie cookie = ResponseCookie.from("token", token)
@@ -87,32 +95,57 @@ public class UsuarioController {
                 .orElseThrow(() -> new IllegalArgumentException("Congregação não encontrada"));
         usuario.setCongregacao(congregacao);
 
+        String token = tokenService.generateVerificationToken(usuario);
+        usuario.setVerificationToken(token);
+        usuario.setVerified(false);
+
         this.usuarioRepository.save(usuario);
-        return ResponseEntity.ok(UsuarioResponseDTO.fromUsuario(usuario));
+        this.emailService.enviarEmailVerificacao(usuario.getEmail(), token);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Usuário registrado com sucesso. Por favor, verifique seu e-mail para ativar sua conta."));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity verify(@RequestParam String token) {
+        String email = tokenService.validateToken(token);
+        if (email.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Token inválido ou expirado."));
+        }
+
+        Usuario usuario = (Usuario) usuarioRepository.findByEmail(email);
+        if (usuario == null || !token.equals(usuario.getVerificationToken())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Token inválido."));
+        }
+
+        usuario.setVerified(true);
+        usuario.setVerificationToken(null);
+        usuarioRepository.save(usuario);
+
+        return ResponseEntity.ok(Map.of("message", "E-mail verificado com sucesso! Agora você pode fazer login."));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizarUsuario(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestBody Usuario usuarioAtualizado) {
         return usuarioRepository.findById(id)
-            .map(usuarioExistente -> {
-                usuarioExistente.setNome(usuarioAtualizado.getNome());
-                usuarioExistente.setEmail(usuarioAtualizado.getEmail());
-                // A senha não deve ser atualizada por aqui sem criptografia!
-                usuarioRepository.save(usuarioExistente);
-                return ResponseEntity.ok(UsuarioResponseDTO.fromUsuario(usuarioExistente));
-            })
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .map(usuarioExistente -> {
+                    usuarioExistente.setNome(usuarioAtualizado.getNome());
+                    usuarioExistente.setEmail(usuarioAtualizado.getEmail());
+                    // A senha não deve ser atualizada por aqui sem criptografia!
+                    usuarioRepository.save(usuarioExistente);
+                    return ResponseEntity.ok(UsuarioResponseDTO.fromUsuario(usuarioExistente));
+                })
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletarUsuario(@PathVariable Long id) {
         return usuarioRepository.findById(id)
-            .map(usuario -> {
-                usuarioRepository.delete(usuario);
-                return ResponseEntity.ok("Usuário deletado com sucesso");
-            })
-            .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado"));
+                .map(usuario -> {
+                    usuarioRepository.delete(usuario);
+                    return ResponseEntity.ok("Usuário deletado com sucesso");
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado"));
     }
 }

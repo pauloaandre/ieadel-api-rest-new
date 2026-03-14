@@ -36,16 +36,23 @@ public class Usuario implements UserDetails {
     @JoinColumn(name = "id_congregacao", nullable = false)
     private Congregacao congregacao;
 
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
+
+    @Column(name = "reset_token")
+    private String resetToken;
+
     public Usuario(String nome, String email, String senha, Perfil perfil) {
         this.nome = nome;
         this.email = email;
         this.senha = senha;
         this.perfil = perfil;
-
     }
 
     public Usuario() {
-
     }
 
     // Getters e Setters
@@ -105,12 +112,36 @@ public class Usuario implements UserDetails {
         this.ativo = ativo;
     }
 
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public void setVerificationToken(String verificationToken) {
+        this.verificationToken = verificationToken;
+    }
+
+    public Boolean getVerified() {
+        return isVerified;
+    }
+
+    public void setVerified(Boolean verified) {
+        isVerified = verified;
+    }
+
+    public String getResetToken() {
+        return resetToken;
+    }
+
+    public void setResetToken(String resetToken) {
+        this.resetToken = resetToken;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (this.perfil == Perfil.ADMIN) {
             return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
-        } else  {
-            return List.of(new SimpleGrantedAuthority("USER"));
+        } else {
+            return List.of(new SimpleGrantedAuthority("ROLE_USER"));
         }
     }
 
@@ -123,7 +154,24 @@ public class Usuario implements UserDetails {
     public String getUsername() {
         return email;
     }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return ativo != null && ativo;
+    }
 }
-
-
-

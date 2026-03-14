@@ -9,6 +9,7 @@ public class MovimentacaoDTO {
     private LocalDate data;
     private TipoMovimentacao tipo; 
     private Long usuarioId;
+    private Boolean isVisitante;
 
     // Getters e Setters
     public String getDescricao() {
@@ -49,5 +50,13 @@ public class MovimentacaoDTO {
 
     public void setUsuarioId(Long usuarioId) {
         this.usuarioId = usuarioId;
+    }
+
+    public Boolean getIsVisitante() {
+        return isVisitante;
+    }
+
+    public void setIsVisitante(Boolean isVisitante) {
+        this.isVisitante = isVisitante;
     }
 }

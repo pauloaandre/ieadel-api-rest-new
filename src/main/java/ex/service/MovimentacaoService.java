@@ -47,8 +47,8 @@ public class MovimentacaoService {
     // Adicionar movimentação (partindo de DTO e Usuario logado)
     @Transactional
     public MovimentacaoResponseDTO criar(MovimentacaoDTO dto, Usuario logado) {
-        if (dto.getTipo() == TipoMovimentacao.DIZIMO && dto.getUsuarioId() == null) {
-            throw new IllegalArgumentException("Dízimos requerem usuarioId");
+        if (dto.getTipo() == TipoMovimentacao.DIZIMO && dto.getUsuarioId() == null && (dto.getIsVisitante() == null || !dto.getIsVisitante())) {
+            throw new IllegalArgumentException("Dízimos requerem usuarioId ou flag isVisitante");
         }
 
         Movimentacao movimentacao = new Movimentacao();
@@ -60,7 +60,13 @@ public class MovimentacaoService {
         // Multi-tenant: Sempre usa a congregação do usuário que está operando
         movimentacao.setCongregacao(logado.getCongregacao());
 
-        if (dto.getUsuarioId() != null) {
+        if (dto.getIsVisitante() != null && dto.getIsVisitante()) {
+            Usuario visitante = usuarioRepository.findVisitanteByCongregacao(logado.getCongregacao().getIdCongregacao());
+            if (visitante == null) {
+                throw new IllegalArgumentException("Usuário Visitante não encontrado para esta congregação");
+            }
+            movimentacao.setUsuario(visitante);
+        } else if (dto.getUsuarioId() != null) {
             Usuario usuarioDizimista = usuarioRepository.findById(dto.getUsuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário dizimista não encontrado"));
             movimentacao.setUsuario(usuarioDizimista);
@@ -76,8 +82,8 @@ public class MovimentacaoService {
         Movimentacao existente = movimentacaoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Movimentação não encontrada com ID: " + id));
 
-        if (dto.getTipo() == TipoMovimentacao.DIZIMO && dto.getUsuarioId() == null) {
-            throw new IllegalArgumentException("Dízimos requerem usuarioId");
+        if (dto.getTipo() == TipoMovimentacao.DIZIMO && dto.getUsuarioId() == null && (dto.getIsVisitante() == null || !dto.getIsVisitante())) {
+            throw new IllegalArgumentException("Dízimos requerem usuarioId ou flag isVisitante");
         }
 
         existente.setDescricao(dto.getDescricao());
@@ -85,7 +91,13 @@ public class MovimentacaoService {
         existente.setData(dto.getData());
         existente.setTipo(dto.getTipo());
 
-        if (dto.getUsuarioId() != null) {
+        if (dto.getIsVisitante() != null && dto.getIsVisitante()) {
+            Usuario visitante = usuarioRepository.findVisitanteByCongregacao(existente.getCongregacao().getIdCongregacao());
+            if (visitante == null) {
+                throw new IllegalArgumentException("Usuário Visitante não encontrado para esta congregação");
+            }
+            existente.setUsuario(visitante);
+        } else if (dto.getUsuarioId() != null) {
             Usuario usuarioDizimista = usuarioRepository.findById(dto.getUsuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário dizimista não encontrado"));
             existente.setUsuario(usuarioDizimista);
