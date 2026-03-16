@@ -82,13 +82,14 @@ public class UsuarioController {
         if (this.usuarioRepository.findByEmail(data.email()) != null) return ResponseEntity.badRequest().build();
 
         String encryptedPassword = new BCryptPasswordEncoder().encode(data.senha());
-        Usuario usuario = new Usuario(data.nome(), data.email(), encryptedPassword, data.perfil());
-        usuario.setPerfil(Perfil.USER);
+        // Força o perfil USER para autocadastro
+        Usuario usuario = new Usuario(data.nome(), data.email(), encryptedPassword, Perfil.USER);
+        
         Congregacao congregacao = congregacaoRepository.findById(data.idCongregacao())
                 .orElseThrow(() -> new IllegalArgumentException("Congregação não encontrada"));
         usuario.setCongregacao(congregacao);
+        
         usuario.setAtivo(true);
-
         this.usuarioRepository.save(usuario);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Usuário registrado com sucesso."));
@@ -107,15 +108,5 @@ public class UsuarioController {
                     return ResponseEntity.ok(UsuarioResponseDTO.fromUsuario(usuarioExistente));
                 })
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletarUsuario(@PathVariable Long id) {
-        return usuarioRepository.findById(id)
-                .map(usuario -> {
-                    usuarioRepository.delete(usuario);
-                    return ResponseEntity.ok("Usuário deletado com sucesso");
-                })
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuário não encontrado"));
     }
 }

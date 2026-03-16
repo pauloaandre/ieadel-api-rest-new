@@ -43,7 +43,7 @@ public class CongregacaoService {
         
         visitante.setPerfil(Perfil.USER);
         visitante.setAtivo(false);
-        visitante.setVerified(true); // Para evitar problemas com fluxo de verificação de e-mail se houver
+        //visitante.setVerified(true);  Para evitar problemas com fluxo de verificação de e-mail se houver
         visitante.setCongregacao(congregacao);
         
         usuarioRepository.save(visitante);

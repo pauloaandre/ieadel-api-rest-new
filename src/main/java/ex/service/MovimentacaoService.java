@@ -21,10 +21,15 @@ public class MovimentacaoService {
     private UsuarioRepository usuarioRepository;
 
     // Listar por mês, ano e congregação (retornando DTOs)
-    public List<MovimentacaoResponseDTO> listarPorMesAnoECongregacao(TipoMovimentacao tipo, String mes, String ano, int idCongregacao) {
+    public List<MovimentacaoResponseDTO> listarPorMesAnoECongregacao(TipoMovimentacao tipo, String mes, String ano, Integer idCongregacao) {
         String mesStr = mes.length() == 1 ? "0" + mes : mes;
-        return movimentacaoRepository.findByMesAnoECongregacao(tipo, mesStr, ano, idCongregacao)
-                .stream()
+        List<Movimentacao> movimentacoes;
+        if (idCongregacao == null || idCongregacao == 0) {
+            movimentacoes = movimentacaoRepository.findByMesAndAno(tipo, mesStr, ano);
+        } else {
+            movimentacoes = movimentacaoRepository.findByMesAnoECongregacao(tipo, mesStr, ano, idCongregacao);
+        }
+        return movimentacoes.stream()
                 .map(MovimentacaoResponseDTO::fromMovimentacao)
                 .toList();
     }
@@ -61,6 +66,9 @@ public class MovimentacaoService {
         movimentacao.setCongregacao(logado.getCongregacao());
 
         if (dto.getIsVisitante() != null && dto.getIsVisitante()) {
+            if (logado.getCongregacao() == null) {
+                throw new IllegalArgumentException("Usuário logado sem congregação não pode criar movimentação de visitante");
+            }
             Usuario visitante = usuarioRepository.findVisitanteByCongregacao(logado.getCongregacao().getIdCongregacao());
             if (visitante == null) {
                 throw new IllegalArgumentException("Usuário Visitante não encontrado para esta congregação");
@@ -92,6 +100,9 @@ public class MovimentacaoService {
         existente.setTipo(dto.getTipo());
 
         if (dto.getIsVisitante() != null && dto.getIsVisitante()) {
+            if (existente.getCongregacao() == null) {
+                throw new IllegalArgumentException("Movimentação sem congregação não pode ter visitante");
+            }
             Usuario visitante = usuarioRepository.findVisitanteByCongregacao(existente.getCongregacao().getIdCongregacao());
             if (visitante == null) {
                 throw new IllegalArgumentException("Usuário Visitante não encontrado para esta congregação");
@@ -110,16 +121,32 @@ public class MovimentacaoService {
     }
 
     // Calcular total por tipo e congregação (mensal)
-    public BigDecimal calcularTotalECongregacao(TipoMovimentacao tipo, String mes, String ano, int idCongregacao) {
-        BigDecimal total = movimentacaoRepository.calcularTotalPorTipoECongregacao(tipo, mes.length() == 1 ? "0" + mes : mes, ano, idCongregacao);
+    public BigDecimal calcularTotalECongregacao(TipoMovimentacao tipo, String mes, String ano, Integer idCongregacao) {
+        BigDecimal total;
+        String mesStr = mes.length() == 1 ? "0" + mes : mes;
+        if (idCongregacao == null || idCongregacao == 0) {
+            total = movimentacaoRepository.calcularTotalPorTipo(tipo, mesStr, ano);
+        } else {
+            total = movimentacaoRepository.calcularTotalPorTipoECongregacao(tipo, mesStr, ano, idCongregacao);
+        }
         return total != null ? total : BigDecimal.ZERO;
     }
 
     // Calcular total geral por congregação
-    public BigDecimal calcularTotalGeralPorCongregacao(int idCongregacao) {
-        BigDecimal totalDizimos = movimentacaoRepository.getTotalPorTipoECongregacao(TipoMovimentacao.DIZIMO, idCongregacao);
-        BigDecimal totalOfertas = movimentacaoRepository.getTotalPorTipoECongregacao(TipoMovimentacao.OFERTA, idCongregacao);
-        BigDecimal totalDespesas = movimentacaoRepository.getTotalPorTipoECongregacao(TipoMovimentacao.DESPESA, idCongregacao);
+    public BigDecimal calcularTotalGeralPorCongregacao(Integer idCongregacao) {
+        BigDecimal totalDizimos;
+        BigDecimal totalOfertas;
+        BigDecimal totalDespesas;
+        
+        if (idCongregacao == null || idCongregacao == 0) {
+            totalDizimos = movimentacaoRepository.getTotalPorTipo(TipoMovimentacao.DIZIMO);
+            totalOfertas = movimentacaoRepository.getTotalPorTipo(TipoMovimentacao.OFERTA);
+            totalDespesas = movimentacaoRepository.getTotalPorTipo(TipoMovimentacao.DESPESA);
+        } else {
+            totalDizimos = movimentacaoRepository.getTotalPorTipoECongregacao(TipoMovimentacao.DIZIMO, idCongregacao);
+            totalOfertas = movimentacaoRepository.getTotalPorTipoECongregacao(TipoMovimentacao.OFERTA, idCongregacao);
+            totalDespesas = movimentacaoRepository.getTotalPorTipoECongregacao(TipoMovimentacao.DESPESA, idCongregacao);
+        }
         
         return (totalDizimos != null ? totalDizimos : BigDecimal.ZERO)
                 .add(totalOfertas != null ? totalOfertas : BigDecimal.ZERO)

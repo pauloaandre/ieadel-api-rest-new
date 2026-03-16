@@ -32,7 +32,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/auth/verify").permitAll()
                         .requestMatchers(HttpMethod.GET, "/congregacoes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
+                        .requestMatchers("/superadmin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/movimentacoes").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/congregacoes").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/congregacoes").hasRole("SUPER_ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

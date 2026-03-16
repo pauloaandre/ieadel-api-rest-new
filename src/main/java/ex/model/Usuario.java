@@ -33,11 +33,14 @@ public class Usuario implements UserDetails {
     private Boolean ativo = true;
 
     @ManyToOne
-    @JoinColumn(name = "id_congregacao", nullable = false)
+    @JoinColumn(name = "id_congregacao", nullable = true)
     private Congregacao congregacao;
 
     @Column(name = "reset_token")
     private String resetToken;
+
+    @Column(name = "is_verified")
+    private Boolean isVerified = true;
 
     public Usuario(String nome, String email, String senha, Perfil perfil) {
         this.nome = nome;
@@ -116,7 +119,9 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (this.perfil == Perfil.ADMIN) {
+        if (this.perfil == Perfil.SUPER_ADMIN) {
+            return List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"), new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
+        } else if (this.perfil == Perfil.ADMIN) {
             return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
         } else {
             return List.of(new SimpleGrantedAuthority("ROLE_USER"));

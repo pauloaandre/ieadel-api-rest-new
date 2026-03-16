@@ -18,6 +18,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("SELECT u FROM Usuario u WHERE LOWER(u.nome) LIKE LOWER(CONCAT('%', :nome, '%')) AND u.congregacao.idCongregacao = :idCongregacao AND u.ativo = true")
     List<Usuario> findByNomeContainingIgnoreCaseAndCongregacao(@Param("nome") String nome, @Param("idCongregacao") Long idCongregacao);
 
+    @Query("SELECT u FROM Usuario u WHERE LOWER(u.nome) LIKE LOWER(CONCAT('%', :nome, '%')) AND u.ativo = true")
+    List<Usuario> findByNomeContainingIgnoreCase(@Param("nome") String nome);
+
     @Query("SELECT u FROM Usuario u WHERE u.congregacao.idCongregacao = :idCongregacao AND u.ativo = false AND u.nome LIKE 'Visitante - %'")
     Usuario findVisitanteByCongregacao(@Param("idCongregacao") Long idCongregacao);
 }

@@ -30,17 +30,29 @@ public class MovimentacaoController {
     public ResponseEntity<List<MovimentacaoResponseDTO>> listarPorMesAno(
             @RequestParam TipoMovimentacao tipo,
             @RequestParam String mes,
-            @RequestParam String ano) {
+            @RequestParam String ano,
+            @RequestParam(required = false) Integer idCongregacao)  {
 
         Usuario logado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        int idCongregacao = logado.getCongregacao().getIdCongregacao().intValue();
+        
+        Integer congregacaoId = idCongregacao;
+        
+        if (congregacaoId == null) {
+            if (logado.getCongregacao() == null) {
+                if (logado.getPerfil() != Perfil.SUPER_ADMIN) {
+                    return ResponseEntity.badRequest().build();
+                }
+            } else {
+                congregacaoId = logado.getCongregacao().getIdCongregacao().intValue();
+            }
+        }
 
         // Validação dos parâmetros
         if (!mes.matches("\\d{2}") || !ano.matches("\\d{4}")) {
             return ResponseEntity.badRequest().body(Collections.emptyList());
         }
 
-        List<MovimentacaoResponseDTO> movimentacoes = movimentacaoService.listarPorMesAnoECongregacao(tipo, mes, ano, idCongregacao);
+        List<MovimentacaoResponseDTO> movimentacoes = movimentacaoService.listarPorMesAnoECongregacao(tipo, mes, ano, congregacaoId);
         return ResponseEntity.ok(movimentacoes);
     }
 
@@ -48,27 +60,50 @@ public class MovimentacaoController {
     @GetMapping("/totais")
     public ResponseEntity<Map<String, BigDecimal>> getTotaisPorMes(
             @RequestParam String mes,
-            @RequestParam String ano) {
+            @RequestParam String ano,
+            @RequestParam(required = false) Integer idCongregacao) {
 
         Usuario logado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        int idCongregacao = logado.getCongregacao().getIdCongregacao().intValue();
+        
+        Integer congregacaoId = idCongregacao;
+        
+        if (congregacaoId == null) {
+            if (logado.getCongregacao() == null) {
+                if (logado.getPerfil() != Perfil.SUPER_ADMIN) {
+                    return ResponseEntity.badRequest().build();
+                }
+            } else {
+                congregacaoId = logado.getCongregacao().getIdCongregacao().intValue();
+            }
+        }
 
         Map<String, BigDecimal> totais = new HashMap<>();
-        totais.put("dizimo", movimentacaoService.calcularTotalECongregacao(TipoMovimentacao.DIZIMO, mes, ano, idCongregacao));
-        totais.put("oferta", movimentacaoService.calcularTotalECongregacao(TipoMovimentacao.OFERTA, mes, ano, idCongregacao));
-        totais.put("despesa", movimentacaoService.calcularTotalECongregacao(TipoMovimentacao.DESPESA, mes, ano, idCongregacao));
+        totais.put("dizimo", movimentacaoService.calcularTotalECongregacao(TipoMovimentacao.DIZIMO, mes, ano, congregacaoId));
+        totais.put("oferta", movimentacaoService.calcularTotalECongregacao(TipoMovimentacao.OFERTA, mes, ano, congregacaoId));
+        totais.put("despesa", movimentacaoService.calcularTotalECongregacao(TipoMovimentacao.DESPESA, mes, ano, congregacaoId));
 
         return ResponseEntity.ok(totais);
     }
 
     @GetMapping("/totalGeral")
-    public ResponseEntity<Map<String, BigDecimal>> getTotalGeral() {
+    public ResponseEntity<Map<String, BigDecimal>> getTotalGeral(@RequestParam(required = false) Integer idCongregacao) {
 
         Usuario logado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        int idCongregacao = logado.getCongregacao().getIdCongregacao().intValue();
+        
+        Integer congregacaoId = idCongregacao;
+
+        if (congregacaoId == null) {
+            if (logado.getCongregacao() == null) {
+                if (logado.getPerfil() != Perfil.SUPER_ADMIN) {
+                    return ResponseEntity.badRequest().build();
+                }
+            } else {
+                congregacaoId = logado.getCongregacao().getIdCongregacao().intValue();
+            }
+        }
 
         Map<String, BigDecimal> totais = new HashMap<>();
-        totais.put("total", movimentacaoService.calcularTotalGeralPorCongregacao(idCongregacao));
+        totais.put("total", movimentacaoService.calcularTotalGeralPorCongregacao(congregacaoId));
         return ResponseEntity.ok(totais);
     }
 

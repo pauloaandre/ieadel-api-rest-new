@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import ex.model.Perfil;
 import ex.model.Usuario;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,13 +23,17 @@ public class TokenService {
     public String generateToken(Usuario usuario){
         try{
             Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.create()
+            var jwtBuilder = JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getEmail())
                     .withClaim("perfil", usuario.getPerfil().name())
-                    .withClaim("idCongregacao", usuario.getCongregacao().getIdCongregacao())
-                    .withExpiresAt(genExpirationDate(2))
-                    .sign(algorithm);
+                    .withExpiresAt(genExpirationDate(2));
+
+            if (usuario.getPerfil() != Perfil.SUPER_ADMIN && usuario.getCongregacao() != null) {
+                jwtBuilder.withClaim("idCongregacao", usuario.getCongregacao().getIdCongregacao());
+            }
+
+            return jwtBuilder.sign(algorithm);
         } catch(JWTCreationException exception){
             throw new RuntimeException("Erro ao gerar token", exception);
         }
