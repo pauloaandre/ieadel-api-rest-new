@@ -32,6 +32,16 @@ public class CongregacaoController {
                 .collect(Collectors.toList());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<CongregacaoResponseDTO> getCongregacaoById(@PathVariable Long id, Authentication authentication) {
+        boolean isSuperAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        return congregacaoRepository.findById(id)
+                .map(congregacao -> ResponseEntity.ok(CongregacaoResponseDTO.fromCongregacao(congregacao, isSuperAdmin)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public ResponseEntity<Congregacao> criarCongregacao(@RequestBody Congregacao congregacao) {
         Congregacao novaCongregacao = congregacaoService.criarCongregacao(congregacao);
